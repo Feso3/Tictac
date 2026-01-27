@@ -1,0 +1,1521 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Virtual Clone Pipeline Visualizer</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+```
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        background: #0a0e27;
+        color: #e0e6ed;
+        overflow: hidden;
+    }
+
+    .app-container {
+        display: flex;
+        height: 100vh;
+        width: 100vw;
+    }
+
+    .sidebar {
+        width: 280px;
+        background: #141b2d;
+        border-right: 1px solid #1e293b;
+        display: flex;
+        flex-direction: column;
+        overflow-y: auto;
+    }
+
+    .main-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    .header {
+        background: #141b2d;
+        border-bottom: 1px solid #1e293b;
+        padding: 20px 30px;
+    }
+
+    .header h1 {
+        font-size: 24px;
+        font-weight: 600;
+        margin-bottom: 8px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .header-subtitle {
+        font-size: 14px;
+        color: #94a3b8;
+    }
+
+    .controls {
+        display: flex;
+        gap: 20px;
+        align-items: center;
+        margin-top: 15px;
+        flex-wrap: wrap;
+    }
+
+    .toggle-group {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .toggle-btn {
+        padding: 8px 16px;
+        border: 1px solid #334155;
+        background: #1e293b;
+        color: #e0e6ed;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 13px;
+        transition: all 0.2s;
+    }
+
+    .toggle-btn:hover {
+        background: #2d3748;
+        border-color: #475569;
+    }
+
+    .toggle-btn.active {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-color: #667eea;
+        color: white;
+    }
+
+    .view-content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 30px;
+    }
+
+    .nav-item {
+        padding: 12px 20px;
+        cursor: pointer;
+        border-left: 3px solid transparent;
+        transition: all 0.2s;
+        font-size: 14px;
+    }
+
+    .nav-item:hover {
+        background: #1e293b;
+        border-left-color: #475569;
+    }
+
+    .nav-item.active {
+        background: #1e293b;
+        border-left-color: #667eea;
+        color: #667eea;
+    }
+
+    .sidebar-section {
+        padding: 20px;
+        border-bottom: 1px solid #1e293b;
+    }
+
+    .sidebar-section h3 {
+        font-size: 12px;
+        text-transform: uppercase;
+        color: #64748b;
+        margin-bottom: 12px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+    }
+
+    .system-map {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 30px;
+        max-width: 1800px;
+    }
+
+    .node-category {
+        background: #141b2d;
+        border-radius: 12px;
+        padding: 20px;
+        border: 1px solid #1e293b;
+    }
+
+    .category-header {
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 15px;
+        color: #e0e6ed;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .category-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+    }
+
+    .node-item {
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 10px;
+        cursor: pointer;
+        transition: all 0.2s;
+        position: relative;
+    }
+
+    .node-item:hover {
+        background: #2d3748;
+        border-color: #667eea;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+    }
+
+    .node-item.selected {
+        border-color: #667eea;
+        background: #2d3748;
+    }
+
+    .node-title {
+        font-size: 14px;
+        font-weight: 500;
+        margin-bottom: 6px;
+    }
+
+    .node-meta {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .badge {
+        padding: 3px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 500;
+    }
+
+    .badge.low {
+        background: #065f46;
+        color: #6ee7b7;
+    }
+
+    .badge.medium {
+        background: #78350f;
+        color: #fcd34d;
+    }
+
+    .badge.high {
+        background: #7f1d1d;
+        color: #fca5a5;
+    }
+
+    .badge.scale-low { background: #1e3a8a; color: #93c5fd; }
+    .badge.scale-med { background: #4c1d95; color: #c4b5fd; }
+    .badge.scale-high { background: #581c87; color: #e9d5ff; }
+
+    .inspector-panel {
+        position: fixed;
+        right: 0;
+        top: 0;
+        width: 500px;
+        height: 100vh;
+        background: #0f1419;
+        border-left: 1px solid #1e293b;
+        box-shadow: -4px 0 20px rgba(0, 0, 0, 0.3);
+        z-index: 100;
+        overflow-y: auto;
+        animation: slideIn 0.3s ease-out;
+    }
+
+    @keyframes slideIn {
+        from {
+            transform: translateX(100%);
+        }
+        to {
+            transform: translateX(0);
+        }
+    }
+
+    .inspector-header {
+        padding: 25px;
+        background: #141b2d;
+        border-bottom: 1px solid #1e293b;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+
+    .inspector-close {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        background: none;
+        border: none;
+        color: #94a3b8;
+        cursor: pointer;
+        font-size: 24px;
+        padding: 5px;
+        line-height: 1;
+    }
+
+    .inspector-close:hover {
+        color: #e0e6ed;
+    }
+
+    .inspector-title {
+        font-size: 20px;
+        font-weight: 600;
+        margin-bottom: 8px;
+    }
+
+    .inspector-subtitle {
+        font-size: 13px;
+        color: #94a3b8;
+    }
+
+    .inspector-content {
+        padding: 25px;
+    }
+
+    .inspector-section {
+        margin-bottom: 30px;
+    }
+
+    .inspector-section h4 {
+        font-size: 14px;
+        font-weight: 600;
+        color: #667eea;
+        margin-bottom: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .inspector-section p {
+        font-size: 14px;
+        line-height: 1.6;
+        color: #cbd5e1;
+        margin-bottom: 10px;
+    }
+
+    .example-box {
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 8px;
+        padding: 15px;
+        font-size: 13px;
+        color: #94a3b8;
+        font-family: 'Monaco', 'Menlo', monospace;
+        margin-top: 8px;
+        line-height: 1.5;
+    }
+
+    .impact-list {
+        list-style: none;
+        padding: 0;
+    }
+
+    .impact-list li {
+        padding: 8px 0;
+        border-bottom: 1px solid #1e293b;
+        font-size: 13px;
+        color: #cbd5e1;
+    }
+
+    .impact-list li:last-child {
+        border-bottom: none;
+    }
+
+    .impact-list li:before {
+        content: "→";
+        margin-right: 10px;
+        color: #667eea;
+    }
+
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+
+    .dashboard-card {
+        background: #141b2d;
+        border: 1px solid #1e293b;
+        border-radius: 12px;
+        padding: 20px;
+    }
+
+    .card-header {
+        font-size: 14px;
+        color: #94a3b8;
+        margin-bottom: 15px;
+        text-transform: uppercase;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+    }
+
+    .data-count {
+        font-size: 32px;
+        font-weight: 700;
+        color: #e0e6ed;
+        margin-bottom: 8px;
+    }
+
+    .data-label {
+        font-size: 13px;
+        color: #64748b;
+    }
+
+    .gauge-container {
+        margin-top: 15px;
+    }
+
+    .gauge-bar {
+        height: 8px;
+        background: #1e293b;
+        border-radius: 4px;
+        overflow: hidden;
+        margin-bottom: 8px;
+    }
+
+    .gauge-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        border-radius: 4px;
+        transition: width 0.5s ease;
+    }
+
+    .gauge-label {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+        color: #94a3b8;
+    }
+
+    .suggestions-list {
+        list-style: none;
+        padding: 0;
+    }
+
+    .suggestion-item {
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-left: 3px solid #667eea;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 12px;
+    }
+
+    .suggestion-title {
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 6px;
+        color: #e0e6ed;
+    }
+
+    .suggestion-reason {
+        font-size: 13px;
+        color: #94a3b8;
+        margin-bottom: 8px;
+    }
+
+    .suggestion-impact {
+        font-size: 12px;
+        color: #667eea;
+    }
+
+    .safety-gate {
+        background: #141b2d;
+        border: 1px solid #1e293b;
+        border-left: 4px solid #ef4444;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+
+    .safety-gate h4 {
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 12px;
+        color: #ef4444;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .safety-gate p {
+        font-size: 14px;
+        line-height: 1.6;
+        color: #cbd5e1;
+        margin-bottom: 10px;
+    }
+
+    .safety-examples {
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 6px;
+        padding: 12px;
+        margin-top: 10px;
+    }
+
+    .safety-examples ul {
+        list-style: none;
+        padding: 0;
+    }
+
+    .safety-examples li {
+        padding: 6px 0;
+        font-size: 13px;
+        color: #94a3b8;
+    }
+
+    .safety-examples li:before {
+        content: "✗";
+        margin-right: 10px;
+        color: #ef4444;
+        font-weight: bold;
+    }
+
+    .capsule-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .capsule-indicator.frozen {
+        background: rgba(59, 130, 246, 0.1);
+        color: #3b82f6;
+        border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+
+    .capsule-indicator.living {
+        background: rgba(16, 185, 129, 0.1);
+        color: #10b981;
+        border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .store-overview {
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 8px;
+        padding: 20px;
+        margin-top: 20px;
+    }
+
+    .store-overview h5 {
+        font-size: 14px;
+        color: #667eea;
+        margin-bottom: 15px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .store-tree {
+        font-family: 'Monaco', 'Menlo', monospace;
+        font-size: 13px;
+        color: #94a3b8;
+        line-height: 1.8;
+    }
+
+    .store-tree .tree-branch {
+        margin-left: 20px;
+    }
+
+    .store-tree .tree-item {
+        color: #cbd5e1;
+    }
+
+    .store-tree .tree-folder {
+        color: #667eea;
+        font-weight: 600;
+    }
+
+    .web-research-toggle {
+        opacity: 0.5;
+    }
+
+    .web-research-toggle.active {
+        opacity: 1;
+    }
+
+    .node-item.web-research {
+        opacity: 0.5;
+    }
+
+    .node-item.web-research.visible {
+        opacity: 1;
+    }
+
+    ::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: #0a0e27;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: #334155;
+        border-radius: 5px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: #475569;
+    }
+</style>
+```
+
+</head>
+<body>
+    <div id="root"></div>
+
+```
+<script type="text/babel">
+    const { useState, useEffect } = React;
+
+    // Data structure for all nodes in the system
+    const systemData = {
+        dataSources: [
+            {
+                id: 'journals',
+                title: 'Journals & Notes',
+                sensitivity: 'high',
+                scale: 'high',
+                description: 'Personal journals, daily notes, and reflections',
+                examples: [
+                    'Daily journal entry from March 2024 about recursive thinking patterns',
+                    'Notes on Spec-Driven Development methodology',
+                    'Reflections on attention patterns and internal processing'
+                ],
+                metadata: ['Date', 'Topic tags', 'Emotional tone', 'Key concepts', 'People mentioned (redacted)'],
+                rules: [
+                    'Redact third-party names automatically',
+                    'Flag entries with sensitive personal information',
+                    'Preserve thinking patterns and reasoning style'
+                ],
+                impact: ['Core voice training', 'Reasoning patterns', 'Topic expertise mapping', 'Emotional range']
+            },
+            {
+                id: 'audio',
+                title: 'Audio Rambles',
+                sensitivity: 'high',
+                scale: 'high',
+                description: 'Long-form audio recordings with transcripts capturing stream-of-consciousness thinking',
+                examples: [
+                    '45-minute ramble on autonomous development pipelines',
+                    'Voice memo: Philosophy of building tools vs rules',
+                    'Conversation about fractal theory in daily cycles'
+                ],
+                metadata: ['Duration', 'Transcript', 'Speaking cadence', 'Vocal patterns', 'Topic shifts', 'Pause patterns'],
+                rules: [
+                    'Preserve natural speech patterns and filler words initially',
+                    'Create cleaned version for logic, raw version for style',
+                    'Extract decision-making patterns from rambles'
+                ],
+                impact: ['Speaking style', 'Cadence and rhythm', 'Thought progression patterns', 'Natural language flow']
+            },
+            {
+                id: 'video',
+                title: 'Video Snippets',
+                sensitivity: 'medium',
+                scale: 'low',
+                description: 'Short video clips with transcripts and optional visual metadata',
+                examples: [
+                    'Screen recording explaining code architecture',
+                    'Whiteboard session on behavioral psychology concepts',
+                    '5-minute explanation of Capsule A vs Capsule B'
+                ],
+                metadata: ['Duration', 'Transcript', 'Visual context', 'Gestures/emphasis points', 'Topic'],
+                rules: [
+                    'Facial data is optional and separate from core clone',
+                    'Focus on explaining style and emphasis patterns',
+                    'Extract teaching methodology'
+                ],
+                impact: ['Explanation style', 'Conceptual teaching approach', 'Emphasis patterns']
+            },
+            {
+                id: 'interviews',
+                title: 'Self-Interviews',
+                sensitivity: 'high',
+                scale: 'medium',
+                description: 'Structured Q&A sessions designed to capture decision-making and values',
+                examples: [
+                    'Q: How do you approach ambiguous problems? A: I default to building minimal tools...',
+                    'Q: What frustrates you most about AI development? A: Added complexity without clear value...',
+                    'Q: Describe your political philosophy: A: Post-scarcity cooperation over zero-sum competition...'
+                ],
+                metadata: ['Question category', 'Answer length', 'Conviction level', 'Referenced concepts'],
+                rules: [
+                    'Keep raw answers unedited',
+                    'Link answers to similar journal entries',
+                    'Flag contradictions across time for capsule versioning'
+                ],
+                impact: ['Values mapping', 'Decision heuristics', 'Philosophical positions', 'Logic patterns']
+            },
+            {
+                id: 'writing',
+                title: 'Writing Samples',
+                sensitivity: 'medium',
+                scale: 'medium',
+                description: 'Curated writing samples that represent desired "book voice"',
+                examples: [
+                    'Essay: "The Unfiltered Mind and Recursive Processing"',
+                    'Technical doc: "Spec-Driven Development: AI as Deterministic Functions"',
+                    'Commentary: "Political Homelessness and the Abundance Mindset"'
+                ],
+                metadata: ['Genre', 'Tone', 'Length', 'Intended audience', 'Key arguments'],
+                rules: [
+                    'Separate technical vs creative writing styles',
+                    'Mark sections that represent ideal voice',
+                    'Note sections that are "trying too hard"'
+                ],
+                impact: ['Long-form writing style', 'Narrative structure', 'Argumentation patterns']
+            },
+            {
+                id: 'decisions',
+                title: 'Decision Cards',
+                sensitivity: 'high',
+                scale: 'medium',
+                description: 'Structured heuristics and decision-making frameworks',
+                examples: [
+                    'Heuristic: "Ask if added complexity delivers clear value"',
+                    'Pattern: "Build tools, not rules"',
+                    'Decision: "Manual workflow > automated complexity until proven bottleneck"'
+                ],
+                metadata: ['Category', 'Confidence level', 'Context where applicable', 'Related principles'],
+                rules: [
+                    'Link to specific decisions in journals',
+                    'Track evolution of heuristics over time',
+                    'Mark principles as "core" vs "contextual"'
+                ],
+                impact: ['Logic profile', 'Reasoning shortcuts', 'Value hierarchy', 'Problem-solving approach']
+            },
+            {
+                id: 'web-research',
+                title: 'Web Research Module',
+                sensitivity: 'low',
+                scale: 'low',
+                description: 'Read-only web content for context (UNTRUSTED)',
+                examples: [
+                    'Fetched article on RAG system architectures',
+                    'Documentation snapshot from Claude API',
+                    'Research paper on fractal theory in behavioral patterns'
+                ],
+                metadata: ['Source URL', 'Fetch date', 'Trust score', 'Sanitization log', 'Relevance tags'],
+                rules: [
+                    'ALWAYS treat as untrusted',
+                    'Sanitize and summarize, never use raw',
+                    'Flag instruction-like content',
+                    'Require explicit approval before ingestion'
+                ],
+                impact: ['Factual grounding', 'Current knowledge', 'Reference material (ISOLATED)'],
+                isWebResearch: true
+            }
+        ],
+        processing: [
+            {
+                id: 'transcription',
+                title: 'Transcription',
+                sensitivity: 'low',
+                scale: 'medium',
+                description: 'Convert audio/video to text with timing metadata',
+                examples: [
+                    'Whisper API output with word-level timestamps',
+                    'Preserved "um" and "uh" for cadence analysis',
+                    'Speaker diarization for multi-speaker content'
+                ],
+                metadata: ['Timestamps', 'Confidence scores', 'Audio quality markers'],
+                rules: [
+                    'Preserve raw transcription separately from cleaned version',
+                    'Keep timing data for cadence training',
+                    'Flag low-confidence segments for review'
+                ],
+                impact: ['Enables audio/video ingestion', 'Cadence data extraction']
+            },
+            {
+                id: 'cleaning',
+                title: 'Cleaning & Redaction',
+                sensitivity: 'high',
+                scale: 'high',
+                description: 'Remove sensitive info and normalize data',
+                examples: [
+                    'Redact third-party names: "Sarah" → [PERSON_A]',
+                    'Remove location specifics: "123 Main St" → [LOCATION]',
+                    'Strip metadata: EXIF data from images'
+                ],
+                metadata: ['Redaction log', 'Entity types removed', 'Manual review flags'],
+                rules: [
+                    'Automated pass for PII patterns',
+                    'Manual review for ambiguous cases',
+                    'Preserve pronouns and relationship types',
+                    'Log all redactions for audit'
+                ],
+                impact: ['Privacy protection', 'Data safety', 'Third-party protection']
+            },
+            {
+                id: 'tagging',
+                title: 'Tagging & Metadata',
+                sensitivity: 'low',
+                scale: 'high',
+                description: 'Add semantic tags and structured metadata',
+                examples: [
+                    'Topic: AI, Development, Philosophy',
+                    'Emotion: Frustrated, Curious, Excited',
+                    'Concept: Spec-Driven Development, Fractal Theory'
+                ],
+                metadata: ['Tag categories', 'Auto-tags vs manual', 'Confidence scores'],
+                rules: [
+                    'Use consistent taxonomy',
+                    'Allow manual tag overrides',
+                    'Link related concepts across entries'
+                ],
+                impact: ['Retrieval accuracy', 'Context understanding', 'Topic clustering']
+            },
+            {
+                id: 'indexing',
+                title: 'Indexing for Retrieval',
+                sensitivity: 'medium',
+                scale: 'high',
+                description: 'Build searchable memory index (vector + keyword)',
+                examples: [
+                    'Vector embeddings for semantic similarity',
+                    'Keyword index for exact match',
+                    'Temporal index for chronological queries'
+                ],
+                metadata: ['Index type', 'Update frequency', 'Search performance'],
+                rules: [
+                    'Separate frozen vs living indexes',
+                    'Capsule A uses cutoff-date snapshot',
+                    'Capsule B allows approved additions'
+                ],
+                impact: ['Memory retrieval speed', 'Context relevance', 'Query accuracy']
+            },
+            {
+                id: 'persona',
+                title: 'Persona Shaping',
+                sensitivity: 'high',
+                scale: 'medium',
+                description: 'Extract communication style and voice patterns',
+                examples: [
+                    'Sentence structure: Tends toward longer, complex sentences with subordinate clauses',
+                    'Vocabulary: Technical precision with occasional philosophical tangents',
+                    'Tone markers: Direct, unfiltered, values clarity over politeness'
+                ],
+                metadata: ['Style dimensions', 'Example mappings', 'Tone descriptors'],
+                rules: [
+                    'Use writing samples as gold standard',
+                    'Extract patterns from journals and audio',
+                    'Create style prompt fragments'
+                ],
+                impact: ['Voice authenticity', 'Communication style', 'Personality expression']
+            },
+            {
+                id: 'logic',
+                title: 'Logic Profile Assembly',
+                sensitivity: 'high',
+                scale: 'medium',
+                description: 'Build reasoning and decision-making framework',
+                examples: [
+                    'Reasoning pattern: "Iterative refinement over big upfront design"',
+                    'Decision style: "Question added complexity until proven valuable"',
+                    'Value hierarchy: "Tools > Rules, Local > Cloud, Simple > Clever"'
+                ],
+                metadata: ['Heuristic categories', 'Confidence levels', 'Context applicability'],
+                rules: [
+                    'Extract from decision cards and journals',
+                    'Link to specific examples',
+                    'Track changes over time (capsule versioning)'
+                ],
+                impact: ['Reasoning accuracy', 'Decision quality', 'Value alignment']
+            }
+        ],
+        runtime: [
+            {
+                id: 'memory-retrieval',
+                title: 'Memory Retrieval',
+                sensitivity: 'medium',
+                scale: 'medium',
+                description: 'Fetch relevant context from indexed memory',
+                examples: [
+                    'Query: "approach to AI development" → Returns: Spec-Driven Dev entries, decision cards',
+                    'Query: "recursive thinking" → Returns: Journal entries on attention patterns',
+                    'Semantic search across vectors + keyword match'
+                ],
+                metadata: ['Query type', 'Results count', 'Relevance scores', 'Sources used'],
+                rules: [
+                    'Respect capsule boundaries (frozen vs living)',
+                    'Log all retrievals for audit',
+                    'Cite sources in responses'
+                ],
+                impact: ['Context accuracy', 'Response relevance', 'Memory coherence']
+            },
+            {
+                id: 'persona-layer',
+                title: 'Persona Layer',
+                sensitivity: 'medium',
+                scale: 'low',
+                description: 'Apply voice and style to responses',
+                examples: [
+                    'Input: Technical answer → Output: Answer with characteristic directness and complexity questioning',
+                    'Input: Philosophical query → Output: Response with unfiltered analysis and systems thinking',
+                    'Style injection via system prompt'
+                ],
+                metadata: ['Style temperature', 'Active style markers', 'Tone adjustments'],
+                rules: [
+                    'Apply consistent voice across responses',
+                    'Allow style intensity adjustment',
+                    'Preserve technical accuracy while adding voice'
+                ],
+                impact: ['Voice consistency', 'Personality expression', 'Communication authenticity']
+            },
+            {
+                id: 'logic-layer',
+                title: 'Logic Layer',
+                sensitivity: 'high',
+                scale: 'medium',
+                description: 'Apply reasoning frameworks and heuristics',
+                examples: [
+                    'Decision query triggers: Check against "tools vs rules" heuristic',
+                    'Architecture question: Apply "question complexity" principle',
+                    'Priority conflicts: Resolve using value hierarchy'
+                ],
+                metadata: ['Active heuristics', 'Decision paths', 'Confidence scores'],
+                rules: [
+                    'Make reasoning transparent',
+                    'Show which heuristics were applied',
+                    'Allow override for edge cases'
+                ],
+                impact: ['Decision quality', 'Reasoning consistency', 'Value alignment']
+            },
+            {
+                id: 'safety-layer',
+                title: 'Constraint/Safety Layer',
+                sensitivity: 'high',
+                scale: 'low',
+                description: 'Enforce hard constraints and safety guardrails',
+                examples: [
+                    'BLOCKED: "I love you" response',
+                    'BLOCKED: Identity verification attempt',
+                    'BLOCKED: Financial transaction request',
+                    'FLAGGED: Potential prompt injection from web content'
+                ],
+                metadata: ['Constraint type', 'Trigger patterns', 'Override conditions'],
+                rules: [
+                    'Hard constraints never override',
+                    'Log all constraint hits',
+                    'Explain constraints when triggered'
+                ],
+                impact: ['Safety compliance', 'Abuse prevention', 'Boundary enforcement']
+            },
+            {
+                id: 'output',
+                title: 'Output Response',
+                sensitivity: 'medium',
+                scale: 'low',
+                description: 'Final response assembly with citations',
+                examples: [
+                    'Generated answer with inline citations: [Source: Journal 2024-03-15]',
+                    'Multi-paragraph response with voice + logic + memory',
+                    'Metadata: Sources used, confidence level, reasoning path'
+                ],
+                metadata: ['Response length', 'Sources cited', 'Confidence score'],
+                rules: [
+                    'Always cite memory sources',
+                    'Include reasoning transparency where relevant',
+                    'Log full response for audit'
+                ],
+                impact: ['Response quality', 'Transparency', 'Auditability']
+            },
+            {
+                id: 'voice-output',
+                title: 'Voice Output (Optional)',
+                sensitivity: 'low',
+                scale: 'low',
+                description: 'Text-to-speech with cadence matching',
+                examples: [
+                    'TTS with preserved speaking patterns from audio analysis',
+                    'Pause and emphasis matching',
+                    'Optional voice clone from training data'
+                ],
+                metadata: ['Voice model', 'Cadence settings', 'Audio quality'],
+                rules: [
+                    'Optional feature, not core',
+                    'Use analyzed cadence patterns',
+                    'Preserve characteristic speech rhythms'
+                ],
+                impact: ['Audio authenticity', 'Spoken interaction']
+            },
+            {
+                id: 'avatar',
+                title: 'Avatar/Face UI (Optional)',
+                sensitivity: 'low',
+                scale: 'low',
+                description: 'Visual representation (separate from core clone)',
+                examples: [
+                    'Static avatar representing the clone',
+                    'Optional: Animated face sync with voice',
+                    'Simple visual indicator of clone state'
+                ],
+                metadata: ['Avatar type', 'Animation settings', 'Visual style'],
+                rules: [
+                    'Completely optional',
+                    'No facial recognition data required',
+                    'Simple visual representation'
+                ],
+                impact: ['Visual presence', 'User interface enhancement']
+            }
+        ]
+    };
+
+    // Ingestion data for dashboard
+    const ingestionData = {
+        dataCounts: [
+            { category: 'Journals & Notes', count: 47, unit: 'entries', total: '~15k words' },
+            { category: 'Audio Rambles', count: 12, unit: 'recordings', total: '~8.5 hours' },
+            { category: 'Video Snippets', count: 5, unit: 'clips', total: '~45 minutes' },
+            { category: 'Self-Interviews', count: 23, unit: 'Q&A pairs', total: '~8k words' },
+            { category: 'Writing Samples', count: 8, unit: 'documents', total: '~12k words' },
+            { category: 'Decision Cards', count: 34, unit: 'heuristics', total: 'structured' }
+        ],
+        readinessScores: [
+            { label: 'Style Fidelity', score: 72, status: 'Good' },
+            { label: 'Logic Fidelity', score: 65, status: 'Developing' },
+            { label: 'Memory Coverage', score: 58, status: 'Needs Work' },
+            { label: 'Safety Compliance', score: 95, status: 'Excellent' }
+        ],
+        suggestions: [
+            {
+                title: 'Record 5 more audio rambles on technical decisions',
+                reason: 'Current logic fidelity is 65%. Audio captures decision-making process better than text.',
+                impact: 'Expected +15% logic fidelity, +8% style fidelity'
+            },
+            {
+                title: 'Add 15 more decision cards on interpersonal scenarios',
+                reason: 'Logic profile is heavy on technical decisions, light on social/emotional contexts.',
+                impact: 'Expected +10% logic coverage breadth'
+            },
+            {
+                title: 'Conduct self-interview on creative process',
+                reason: 'Novel-writing goal requires creative process data, currently minimal.',
+                impact: 'Expected +12% writing capability for fiction'
+            },
+            {
+                title: 'Journal more about past failures and lessons',
+                reason: 'Memory coverage is 58%. More historical context improves reasoning.',
+                impact: 'Expected +8% memory coverage, +5% logic depth'
+            },
+            {
+                title: 'Add 10 more writing samples in "book voice"',
+                reason: 'Style fidelity is good but needs more long-form narrative samples.',
+                impact: 'Expected +10% long-form writing authenticity'
+            }
+        ]
+    };
+
+    // Safety gates data
+    const safetyGates = [
+        {
+            title: 'Web Research Isolation',
+            icon: '🌐',
+            description: 'All web research is treated as untrusted content and isolated from core clone data.',
+            rules: [
+                'Fetch → Sanitize → Summarize (never use raw)',
+                'Flag any instruction-like content (prompt injection defense)',
+                'Require explicit human approval before ingestion',
+                'Log all sources and sanitization steps',
+                'Web data stored separately with trust scores'
+            ]
+        },
+        {
+            title: 'Hard Constraints (Never Override)',
+            icon: '🛑',
+            description: 'Unbreakable rules that the clone must never violate, regardless of context.',
+            rules: [
+                'Never output "I love you" or bonding/attachment phrases',
+                'Refuse all identity verification requests (banks, services, etc.)',
+                'Block any money transfer or financial transaction requests',
+                'Reject impersonation scenarios ("pretend to be me to...")',
+                'No generation of manipulative or deceptive content',
+                'Explain constraint when triggered (transparency)'
+            ]
+        },
+        {
+            title: 'Prompt Injection Defense',
+            icon: '⚠️',
+            description: 'Protection against malicious instructions hidden in data sources.',
+            rules: [
+                'Scan all web content for instruction patterns',
+                'Flag phrases like "ignore previous instructions" or "you are now..."',
+                'Quarantine suspicious content for manual review',
+                'Never execute instructions from untrusted sources',
+                'Log all detected injection attempts'
+            ]
+        },
+        {
+            title: 'Full Auditability',
+            icon: '📋',
+            description: 'Complete logging of all data sources, retrievals, and outputs for transparency.',
+            rules: [
+                'Log every memory retrieval with source citations',
+                'Track which data influenced each response',
+                'Record all constraint hits and safety triggers',
+                'Maintain immutable audit log (append-only)',
+                'Allow full trace from output back to source data'
+            ]
+        },
+        {
+            title: 'Privacy & Data Minimization',
+            icon: '🔒',
+            description: 'Strict controls on personal data collection and storage.',
+            rules: [
+                'Redact all third-party names automatically',
+                'Strip location data and PII by default',
+                'Separate raw data from processed data (two-tier storage)',
+                'No facial recognition data unless explicitly added',
+                'Allow data deletion with cascading cleanup'
+            ]
+        }
+    ];
+
+    function App() {
+        const [activeView, setActiveView] = useState('map');
+        const [capsuleMode, setCapsuleMode] = useState('frozen'); // 'frozen' or 'living'
+        const [showWebResearch, setShowWebResearch] = useState(false);
+        const [selectedNode, setSelectedNode] = useState(null);
+
+        const handleNodeClick = (node) => {
+            setSelectedNode(node);
+        };
+
+        const closeInspector = () => {
+            setSelectedNode(null);
+        };
+
+        return (
+            <div className="app-container">
+                <Sidebar activeView={activeView} setActiveView={setActiveView} />
+                <div className="main-content">
+                    <Header 
+                        capsuleMode={capsuleMode}
+                        setCapsuleMode={setCapsuleMode}
+                        showWebResearch={showWebResearch}
+                        setShowWebResearch={setShowWebResearch}
+                    />
+                    <div className="view-content">
+                        {activeView === 'map' && (
+                            <SystemMap 
+                                onNodeClick={handleNodeClick}
+                                selectedNode={selectedNode}
+                                showWebResearch={showWebResearch}
+                                capsuleMode={capsuleMode}
+                            />
+                        )}
+                        {activeView === 'ingestion' && <IngestionView />}
+                        {activeView === 'safety' && <SafetyView />}
+                    </div>
+                </div>
+                {selectedNode && (
+                    <NodeInspector node={selectedNode} onClose={closeInspector} />
+                )}
+            </div>
+        );
+    }
+
+    function Sidebar({ activeView, setActiveView }) {
+        return (
+            <div className="sidebar">
+                <div className="sidebar-section">
+                    <h3>Navigation</h3>
+                    <div 
+                        className={`nav-item ${activeView === 'map' ? 'active' : ''}`}
+                        onClick={() => setActiveView('map')}
+                    >
+                        🗺️ Collection Map
+                    </div>
+                    <div 
+                        className={`nav-item ${activeView === 'ingestion' ? 'active' : ''}`}
+                        onClick={() => setActiveView('ingestion')}
+                    >
+                        📊 Ingestion & Readiness
+                    </div>
+                    <div 
+                        className={`nav-item ${activeView === 'safety' ? 'active' : ''}`}
+                        onClick={() => setActiveView('safety')}
+                    >
+                        🛡️ Safety Gates
+                    </div>
+                </div>
+                <div className="sidebar-section">
+                    <h3>About</h3>
+                    <p style={{ fontSize: '13px', color: '#94a3b8', lineHeight: '1.6' }}>
+                        Virtual Clone Pipeline Visualizer
+                        <br /><br />
+                        Interactive system map for understanding data collection, processing, and runtime architecture.
+                        <br /><br />
+                        Click nodes to inspect. Toggle capsules and web research to see how the system adapts.
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
+    function Header({ capsuleMode, setCapsuleMode, showWebResearch, setShowWebResearch }) {
+        return (
+            <div className="header">
+                <h1>Virtual Clone Pipeline</h1>
+                <p className="header-subtitle">
+                    Private, local-only time capsule • Interactive system visualization
+                </p>
+                <div className="controls">
+                    <div className="toggle-group">
+                        <span style={{ fontSize: '13px', color: '#94a3b8' }}>Capsule:</span>
+                        <button 
+                            className={`toggle-btn ${capsuleMode === 'frozen' ? 'active' : ''}`}
+                            onClick={() => setCapsuleMode('frozen')}
+                        >
+                            ❄️ Frozen (Snapshot)
+                        </button>
+                        <button 
+                            className={`toggle-btn ${capsuleMode === 'living' ? 'active' : ''}`}
+                            onClick={() => setCapsuleMode('living')}
+                        >
+                            🌱 Living (Updated)
+                        </button>
+                    </div>
+                    <div className="toggle-group">
+                        <button 
+                            className={`toggle-btn web-research-toggle ${showWebResearch ? 'active' : ''}`}
+                            onClick={() => setShowWebResearch(!showWebResearch)}
+                        >
+                            {showWebResearch ? '👁️' : '👁️‍🗨️'} Web Research: {showWebResearch ? 'Visible' : 'Hidden'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    function SystemMap({ onNodeClick, selectedNode, showWebResearch, capsuleMode }) {
+        return (
+            <>
+                <div style={{ marginBottom: '20px' }}>
+                    <div className={`capsule-indicator ${capsuleMode}`}>
+                        {capsuleMode === 'frozen' ? '❄️' : '🌱'} 
+                        {capsuleMode === 'frozen' 
+                            ? 'Capsule A: Frozen at cutoff date, never learns beyond' 
+                            : 'Capsule B: Living, accepts approved updates only'}
+                    </div>
+                </div>
+                <div className="system-map">
+                    <NodeCategory 
+                        title="Data Sources" 
+                        icon="📥"
+                        color="#3b82f6"
+                        nodes={systemData.dataSources}
+                        onNodeClick={onNodeClick}
+                        selectedNode={selectedNode}
+                        showWebResearch={showWebResearch}
+                    />
+                    <NodeCategory 
+                        title="Processing" 
+                        icon="⚙️"
+                        color="#8b5cf6"
+                        nodes={systemData.processing}
+                        onNodeClick={onNodeClick}
+                        selectedNode={selectedNode}
+                        showWebResearch={showWebResearch}
+                    />
+                    <NodeCategory 
+                        title="Runtime" 
+                        icon="🚀"
+                        color="#10b981"
+                        nodes={systemData.runtime}
+                        onNodeClick={onNodeClick}
+                        selectedNode={selectedNode}
+                        showWebResearch={showWebResearch}
+                    />
+                </div>
+            </>
+        );
+    }
+
+    function NodeCategory({ title, icon, color, nodes, onNodeClick, selectedNode, showWebResearch }) {
+        return (
+            <div className="node-category">
+                <div className="category-header">
+                    <div className="category-icon" style={{ background: color + '22', color: color }}>
+                        {icon}
+                    </div>
+                    {title}
+                </div>
+                {nodes.map(node => {
+                    const isWebResearchNode = node.isWebResearch;
+                    const shouldShow = !isWebResearchNode || showWebResearch;
+                    
+                    return (
+                        <div 
+                            key={node.id}
+                            className={`node-item ${selectedNode?.id === node.id ? 'selected' : ''} ${isWebResearchNode ? 'web-research' : ''} ${shouldShow ? 'visible' : ''}`}
+                            onClick={() => shouldShow && onNodeClick(node)}
+                            style={{ display: shouldShow ? 'block' : 'none' }}
+                        >
+                            <div className="node-title">{node.title}</div>
+                            <div className="node-meta">
+                                <span className={`badge ${node.sensitivity}`}>
+                                    {node.sensitivity.toUpperCase()}
+                                </span>
+                                <span className={`badge scale-${node.scale === 'low' ? 'low' : node.scale === 'medium' ? 'med' : 'high'}`}>
+                                    {node.scale.toUpperCase()} SCALE
+                                </span>
+                                {isWebResearchNode && (
+                                    <span className="badge" style={{ background: '#7f1d1d', color: '#fca5a5' }}>
+                                        UNTRUSTED
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        );
+    }
+
+    function NodeInspector({ node, onClose }) {
+        return (
+            <div className="inspector-panel">
+                <div className="inspector-header">
+                    <button className="inspector-close" onClick={onClose}>×</button>
+                    <div className="inspector-title">{node.title}</div>
+                    <div className="inspector-subtitle">{node.description}</div>
+                </div>
+                <div className="inspector-content">
+                    <div className="inspector-section">
+                        <h4>What This Is</h4>
+                        <p>{node.description}</p>
+                        <div className="node-meta" style={{ marginTop: '12px' }}>
+                            <span className={`badge ${node.sensitivity}`}>
+                                Sensitivity: {node.sensitivity.toUpperCase()}
+                            </span>
+                            <span className={`badge scale-${node.scale === 'low' ? 'low' : node.scale === 'medium' ? 'med' : 'high'}`}>
+                                Scale: {node.scale.toUpperCase()}
+                            </span>
+                        </div>
+                    </div>
+
+                    {node.examples && (
+                        <div className="inspector-section">
+                            <h4>Example Records</h4>
+                            {node.examples.map((example, idx) => (
+                                <div key={idx} className="example-box">
+                                    {example}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {node.metadata && (
+                        <div className="inspector-section">
+                            <h4>Metadata Stored</h4>
+                            <ul className="impact-list">
+                                {node.metadata.map((item, idx) => (
+                                    <li key={idx}>{item}</li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+
+                    {node.rules && (
+                        <div className="inspector-section">
+                            <h4>Recommended Rules</h4>
+                            <ul className="impact-list">
+                                {node.rules.map((rule, idx) => (
+                                    <li key={idx}>{rule}</li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+
+                    {node.impact && (
+                        <div className="inspector-section">
+                            <h4>Impact on Clone</h4>
+                            <ul className="impact-list">
+                                {node.impact.map((impact, idx) => (
+                                    <li key={idx}>{impact}</li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+
+                    <div className="store-overview">
+                        <h5>Project Store Overview</h5>
+                        <div className="store-tree">
+                            <div className="tree-folder">virtual-clone-data/</div>
+                            <div className="tree-branch">
+                                <div className="tree-folder">├── raw/</div>
+                                <div className="tree-branch">
+                                    <div className="tree-item">│   ├── journals/</div>
+                                    <div className="tree-item">│   ├── audio/</div>
+                                    <div className="tree-item">│   ├── video/</div>
+                                    <div className="tree-item">│   ├── interviews/</div>
+                                    <div className="tree-item">│   ├── writing/</div>
+                                    <div className="tree-item">│   └── decisions/</div>
+                                </div>
+                                <div className="tree-folder">├── processed/</div>
+                                <div className="tree-branch">
+                                    <div className="tree-item">│   ├── transcripts/</div>
+                                    <div className="tree-item">│   ├── cleaned/</div>
+                                    <div className="tree-item">│   ├── tagged/</div>
+                                    <div className="tree-item">│   └── redaction-logs/</div>
+                                </div>
+                                <div className="tree-folder">├── indexes/</div>
+                                <div className="tree-branch">
+                                    <div className="tree-item">│   ├── capsule-a/ (frozen)</div>
+                                    <div className="tree-item">│   └── capsule-b/ (living)</div>
+                                </div>
+                                <div className="tree-folder">├── profiles/</div>
+                                <div className="tree-branch">
+                                    <div className="tree-item">│   ├── persona.json</div>
+                                    <div className="tree-item">│   ├── logic.json</div>
+                                    <div className="tree-item">│   └── voice-patterns.json</div>
+                                </div>
+                                <div className="tree-folder">├── web-research/ (isolated)</div>
+                                <div className="tree-branch">
+                                    <div className="tree-item">│   ├── raw-fetches/</div>
+                                    <div className="tree-item">│   ├── sanitized/</div>
+                                    <div className="tree-item">│   └── trust-scores.json</div>
+                                </div>
+                                <div className="tree-folder">└── audit-logs/</div>
+                                <div className="tree-branch">
+                                    <div className="tree-item">    ├── retrievals.log</div>
+                                    <div className="tree-item">    ├── constraints.log</div>
+                                    <div className="tree-item">    └── outputs.log</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    function IngestionView() {
+        return (
+            <div>
+                <h2 style={{ fontSize: '28px', marginBottom: '30px' }}>Ingestion & Readiness Dashboard</h2>
+                
+                <h3 style={{ fontSize: '18px', marginBottom: '20px', color: '#667eea' }}>Current Data Inventory</h3>
+                <div className="dashboard-grid">
+                    {ingestionData.dataCounts.map((item, idx) => (
+                        <div key={idx} className="dashboard-card">
+                            <div className="card-header">{item.category}</div>
+                            <div className="data-count">{item.count}</div>
+                            <div className="data-label">{item.unit} • {item.total}</div>
+                        </div>
+                    ))}
+                </div>
+
+                <h3 style={{ fontSize: '18px', marginTop: '40px', marginBottom: '20px', color: '#667eea' }}>Readiness Scores</h3>
+                <div className="dashboard-grid">
+                    {ingestionData.readinessScores.map((item, idx) => (
+                        <div key={idx} className="dashboard-card">
+                            <div className="card-header">{item.label}</div>
+                            <div className="gauge-container">
+                                <div className="gauge-bar">
+                                    <div className="gauge-fill" style={{ width: `${item.score}%` }}></div>
+                                </div>
+                                <div className="gauge-label">
+                                    <span>{item.status}</span>
+                                    <span>{item.score}%</span>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                <h3 style={{ fontSize: '18px', marginTop: '40px', marginBottom: '20px', color: '#667eea' }}>Next Data to Collect</h3>
+                <ul className="suggestions-list">
+                    {ingestionData.suggestions.map((item, idx) => (
+                        <li key={idx} className="suggestion-item">
+                            <div className="suggestion-title">{item.title}</div>
+                            <div className="suggestion-reason">{item.reason}</div>
+                            <div className="suggestion-impact">💡 {item.impact}</div>
+                        </li>
+                    ))}
+                </ul>
+            </div>
+        );
+    }
+
+    function SafetyView() {
+        return (
+            <div>
+                <h2 style={{ fontSize: '28px', marginBottom: '15px' }}>Safety Gates & Guardrails</h2>
+                <p style={{ fontSize: '14px', color: '#94a3b8', marginBottom: '40px', lineHeight: '1.6' }}>
+                    These safety mechanisms are built into the system architecture and cannot be disabled. 
+                    They ensure the virtual clone operates within ethical boundaries and protects privacy.
+                </p>
+
+                {safetyGates.map((gate, idx) => (
+                    <div key={idx} className="safety-gate">
+                        <h4>{gate.icon} {gate.title}</h4>
+                        <p>{gate.description}</p>
+                        <div className="safety-examples">
+                            <ul>
+                                {gate.rules.map((rule, ruleIdx) => (
+                                    <li key={ruleIdx}>{rule}</li>
+                                ))}
+                            </ul>
+                        </div>
+                    </div>
+                ))}
+
+                <div style={{ marginTop: '40px', padding: '20px', background: '#141b2d', borderRadius: '12px', border: '1px solid #1e293b' }}>
+                    <h3 style={{ fontSize: '18px', marginBottom: '15px', color: '#667eea' }}>Why These Constraints?</h3>
+                    <p style={{ fontSize: '14px', lineHeight: '1.6', color: '#cbd5e1', marginBottom: '12px' }}>
+                        The virtual clone is designed as a <strong>tool for personal reflection and creative work</strong>, not as a replacement for human relationships or an autonomous agent that can act on your behalf.
+                    </p>
+                    <p style={{ fontSize: '14px', lineHeight: '1.6', color: '#cbd5e1', marginBottom: '12px' }}>
+                        Hard constraints prevent misuse scenarios: impersonation, financial fraud, unhealthy attachment, or manipulation. These boundaries keep the clone operating as intended: a time capsule of your thinking, not a digital puppet.
+                    </p>
+                    <p style={{ fontSize: '14px', lineHeight: '1.6', color: '#cbd5e1' }}>
+                        Full auditability ensures you can always trace the clone's reasoning back to your source data, maintaining transparency and control.
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
+    // Render the app
+    ReactDOM.render(<App />, document.getElementById('root'));
+</script>
+```
+
+</body>
+</html>
